@@ -1,0 +1,13 @@
+[package]
+name = "say_hello_console"
+version = "0.1.0"
+authors = ["solomatovs <solomatovs@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+isay_hello = { path = "../../interface/isay_hello", version = "*" }
+rand = "*"
+
+[lib]
+name = "say_hello_console"
+crate-type = ["dylib"] 

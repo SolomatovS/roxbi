@@ -1,0 +1,9 @@
+[package]
+name = "host"
+version = "0.1.0"
+authors = ["solomatovs <solomatovs@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+libloading = "0.7"
+isay_hello = { path = "../interface/isay_hello", version = "*" }
