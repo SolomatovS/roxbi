@@ -1,7 +1,7 @@
 use isay_hello::ISayHelloService;
 
 #[no_mangle]
-pub extern "Rust" fn new_service() -> Box<dyn ISayHelloService> {
+pub extern "Rust" fn new() -> Box<dyn ISayHelloService> {
     Box::new(PluginSayHello::new())
 }
 
