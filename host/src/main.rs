@@ -1,14 +1,12 @@
 mod helpers;
 
 use isay_hello::ISayHelloService;
-use std::{ffi::OsStr, path};
-use std::error::Error;
+use std::ffi::OsStr;
 use std::boxed::Box;
-use std::rc::Rc;
 use std::fs;
-use libloading::{Library, Symbol};
 
 use crate::helpers::DynamicLibraryManager;
+use crate::helpers::*;
 
 fn main() {
     let mut loader = DynamicLibraryManager::new();
@@ -32,7 +30,7 @@ fn main() {
 
         let path = path.path();
 
-        // всё, что не является файлов пропускаем
+        // всё, что не является файлом пропускаем
         if path.is_file() == false {
             continue;
         }
@@ -43,13 +41,19 @@ fn main() {
             None => continue,
         }
 
-        loader.add_library(path.into_os_string());
+        println!("try load {:?}", &path);
+        if let Err(e) = loader.add_library(path.into_os_string()) {
+            println!("{:?}", e);
+        }
     }
 
-    loader.find_symbol::<extern "Rust" fn() -> Box<dyn ISayHelloService>>(b"new")
+    loader.find_symbol::<extern "Rust" fn() -> Box<dyn ISayHelloService>>(OsStr::new("new"))
         .iter()
         .map(|x| x())
         .for_each(|x| x.say_hello())
     ;
-    
+
+    let repo = DLibRepository::new();
+    let source = 
+    //repo.add(s: Box<dyn IDLibRepositorySource>)
 }

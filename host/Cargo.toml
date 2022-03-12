@@ -7,3 +7,7 @@ edition = "2018"
 [dependencies]
 libloading = "0.7"
 isay_hello = { path = "../interface/isay_hello", version = "*" }
+#my_debug = { path = "../features/my_debug", version = "*", features = ["my_debug"] }
+
+#[features]
+#my_debug = []
