@@ -1,16 +1,69 @@
+mod helpers;
+
 use isay_hello::ISayHelloService;
+use std::{ffi::OsStr, path};
+use std::error::Error;
+use std::boxed::Box;
+use std::rc::Rc;
+use std::fs;
+use libloading::{Library, Symbol};
+
+use crate::helpers::ExtensionsLoader;
 
 fn main() {
-    let path = "/Users/solomatovs/Documents/GitHub/roxbi/plugins/target/debug/libsay_hello_console.dylib";
+    let mut loader = ExtensionsLoader::new();
+    let lib_path = OsStr::new("/Users/solomatovs/Documents/GitHub/roxbi/plugins/target/debug");
+    let lib_extensions = OsStr::new("dylib");
 
-    let service = new_plugin::<dyn ISayHelloService>(path).expect("lib doesn't load");
-    service.say_hello();
+    let dir = match fs::read_dir(lib_path) {Ok(dir) => dir, Err(e) => {
+        println!("lib path {:?} doesn't exist, error: {:?}", lib_path, e);
+        return;
+    }};
+
+    // поочередно проверяем каждый файл в указанной директории
+    for path in dir {
+        let path = match path {
+            Ok(p) => p,
+            Err(e) => {
+                println!("{:?}", lib_path);
+                println!("{:?}", e);
+                return;
+        }};
+
+        let path = path.path();
+
+        // всё, что не является файлов пропускаем
+        if path.is_file() == false {
+            continue;
+        }
+
+        match path.extension() {
+            Some(extension) =>
+                if extension != lib_extensions {continue},
+            None => continue,
+        }
+        
+        //loader.add_library(Rc::new(path.into_os_string()));
+        loader.add_library(path.into_os_string());
+        /*
+        let service = match get_service::<dyn ISayHelloService>(path.as_os_str(), b"new") {
+            Ok(service) => service,
+            Err(e) => {
+                println!("{:?} doesn't load", path);
+                println!("{:?}", e);
+                continue;
+            },
+        };
+        
+        service.say_hello();
+        */
+    }
 }
 
-fn new_plugin<T: ?Sized>(path: &str) -> Result<Box<T>, Box<dyn std::error::Error>> {
+fn get_service<T: ?Sized>(path: &OsStr, symbol: &[u8]) -> Result<Box<T>, Box<dyn Error>> {
     unsafe {
-        let lib = libloading::Library::new(path)?;
-        let new: libloading::Symbol<unsafe extern "Rust" fn() -> Box<T>> = lib.get(b"new")?;
+        let lib = Library::new(path)?;
+        let new: Symbol<extern "Rust" fn() -> Box<T>> = lib.get(symbol)?;
         
         Ok(new())
     }
