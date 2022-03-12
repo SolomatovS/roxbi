@@ -42,30 +42,14 @@ fn main() {
                 if extension != lib_extensions {continue},
             None => continue,
         }
-        
-        //loader.add_library(Rc::new(path.into_os_string()));
 
         loader.add_library(path.into_os_string());
-        /*
-        let service = match get_service::<dyn ISayHelloService>(path.as_os_str(), b"new") {
-            Ok(service) => service,
-            Err(e) => {
-                println!("{:?} doesn't load", path);
-                println!("{:?}", e);
-                continue;
-            },
-        };
-        
-        service.say_hello();
-        */
     }
-}
 
-fn get_service<T: ?Sized>(path: &OsStr, symbol: &[u8]) -> Result<Box<T>, Box<dyn Error>> {
-    unsafe {
-        let lib = Library::new(path)?;
-        let new: Symbol<extern "Rust" fn() -> Box<T>> = lib.get(symbol)?;
-        
-        Ok(new())
-    }
+    loader.find_symbol::<extern "Rust" fn() -> Box<dyn ISayHelloService>>(b"new")
+        .iter()
+        .map(|x| x())
+        .for_each(|x| x.say_hello())
+    ;
+    
 }
