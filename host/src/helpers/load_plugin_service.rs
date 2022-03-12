@@ -7,11 +7,11 @@ use std::boxed::Box;
 use libloading::{Library, Symbol};
 use std::rc::Rc;
 
-pub struct ExtensionsLoader {
+pub struct DynamicLibraryManager {
     library: HashMap<OsString, Library>
 }
 
-impl ExtensionsLoader {
+impl DynamicLibraryManager {
     pub fn add_library(&mut self, path: OsString) -> Result<(), Box<dyn Error>>
     {
         let lib: Library;
@@ -29,15 +29,18 @@ impl ExtensionsLoader {
             library: HashMap::new()
         }
     }
-    /*
-    pub fn get_symbol<'a, T : 'a>(&self, path: &OsStr, symbol: &[u8]) -> Result<Symbol<T>, Box<dyn Error>>
-    {
-        unsafe {
-            let lib = self.library
-            let sym: Symbol<T> = lib.get(symbol)?;
 
-            Ok(sym)
-        }
+    pub fn get_symbol<'a, T : 'a>(&self, symbol: &[u8]) -> Vec<Symbol<T>>
+    {
+        self.library.iter()
+            .filter_map(|x| {
+                unsafe {
+                    match x.1.get(symbol) {
+                        Ok(sym) => Some(sym),
+                        Err(_) => None
+                    }
+                }
+            })
+            .collect()
     }
-    */
 }

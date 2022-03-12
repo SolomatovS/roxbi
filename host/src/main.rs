@@ -8,10 +8,10 @@ use std::rc::Rc;
 use std::fs;
 use libloading::{Library, Symbol};
 
-use crate::helpers::ExtensionsLoader;
+use crate::helpers::DynamicLibraryManager;
 
 fn main() {
-    let mut loader = ExtensionsLoader::new();
+    let mut loader = DynamicLibraryManager::new();
     let lib_path = OsStr::new("/Users/solomatovs/Documents/GitHub/roxbi/plugins/target/debug");
     let lib_extensions = OsStr::new("dylib");
 
@@ -44,6 +44,7 @@ fn main() {
         }
         
         //loader.add_library(Rc::new(path.into_os_string()));
+
         loader.add_library(path.into_os_string());
         /*
         let service = match get_service::<dyn ISayHelloService>(path.as_os_str(), b"new") {
