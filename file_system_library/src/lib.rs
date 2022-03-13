@@ -22,6 +22,8 @@ impl FileSystemLibrary {
 }
 
 impl ILibrary for FileSystemLibrary {
+    type Item = Library;
+
     fn build(&mut self) -> Result<(), Box<dyn Error>> {
         unsafe {
             self.lib = Some(Library::new(self.path.as_os_str())?);
@@ -30,7 +32,7 @@ impl ILibrary for FileSystemLibrary {
         Ok(())
     }
 
-    fn get(&self) -> Option<&Library> {
+    fn get(&self) -> Option<&Self::Item> {
         match &(self.lib) {
             None => None,
             Some(k) => Some(&k)

@@ -1,4 +1,9 @@
 [workspace]
 members = [
-    "host", "my_debug"
+    "host",
+    "my_debug",
+    "ilibrary",
+    "file_system_library",
+    "isay_hello",
+    "say_hello_console"
 ]
