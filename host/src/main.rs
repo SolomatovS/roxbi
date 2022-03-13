@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod helpers;
 
 use isay_hello::ISayHelloService;
@@ -6,7 +8,6 @@ use std::boxed::Box;
 use std::fs;
 
 use crate::helpers::DynamicLibraryManager;
-use crate::helpers::*;
 
 fn main() {
     let mut loader = DynamicLibraryManager::new();
@@ -52,8 +53,4 @@ fn main() {
         .map(|x| x())
         .for_each(|x| x.say_hello())
     ;
-
-    let repo = DLibRepository::new();
-    let source = 
-    //repo.add(s: Box<dyn IDLibRepositorySource>)
 }

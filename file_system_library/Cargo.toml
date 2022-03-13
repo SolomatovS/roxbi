@@ -1,9 +1,9 @@
 [package]
-name = "host"
+name = "file_system_library"
 version = "0.1.0"
 authors = ["solomatovs <solomatovs@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 libloading = "0.7"
-isay_hello = { path = "../isay_hello", version = "*" }
+ilibrary = { path = "../ilibrary", version = "*" }

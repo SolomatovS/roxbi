@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_macros)]
+
 // The debug version
 #[cfg(feature = "my_debug")]
 macro_rules! debug_print {
