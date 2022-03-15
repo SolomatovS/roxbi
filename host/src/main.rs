@@ -2,22 +2,18 @@
 
 mod helpers;
 
-use std::ffi::OsStr;
-use std::env;
+use std::ffi::OsString;
 
 use file_system_library::file_system_repository_source::FileSystemRepositorySource;
 
 fn main() {
     let mut file_source = FileSystemRepositorySource::new();
 
-    let current_dir = env::current_dir();
-    let current_exe = env::current_exe();
-    let lib_path = OsStr::new("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug");
-    let lib_extensions = OsStr::new("dylib");
-
-    file_source.add_directory(lib_path.to_os_string());
+    let file_source = file_source
+        .add_file_path(OsString::from("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib"), true)
+    ;
     
-    let libs = file_source.build(&lib_extensions.to_os_string());
+    let libs = file_source.build();
     
     libs.iter().for_each(|x| println!("{}", x));
     /*
