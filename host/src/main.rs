@@ -2,18 +2,25 @@
 
 mod helpers;
 
-use isay_hello::ISayHelloService;
 use std::ffi::OsStr;
-use std::boxed::Box;
-use std::fs;
+use std::env;
 
-use crate::helpers::DynamicLibraryManager;
+use file_system_library::file_system_repository_source::FileSystemRepositorySource;
 
 fn main() {
-    let mut loader = DynamicLibraryManager::new();
-    let lib_path = OsStr::new("/Users/solomatovs/Documents/GitHub/roxbi/plugins/target/debug");
+    let mut file_source = FileSystemRepositorySource::new();
+
+    let current_dir = env::current_dir();
+    let current_exe = env::current_exe();
+    let lib_path = OsStr::new("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug");
     let lib_extensions = OsStr::new("dylib");
 
+    file_source.add_directory(lib_path.to_os_string());
+    
+    let libs = file_source.build(&lib_extensions.to_os_string());
+    
+    libs.iter().for_each(|x| println!("{}", x));
+    /*
     let dir = match fs::read_dir(lib_path) {Ok(dir) => dir, Err(e) => {
         println!("lib path {:?} doesn't exist, error: {:?}", lib_path, e);
         return;
@@ -53,4 +60,5 @@ fn main() {
         .map(|x| x())
         .for_each(|x| x.say_hello())
     ;
+    */
 }

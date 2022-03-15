@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 libloading = "0.7"
 isay_hello = { path = "../isay_hello", version = "*" }
+file_system_library = { path = "../file_system_library", version = "*" }
