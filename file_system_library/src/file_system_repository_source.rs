@@ -6,28 +6,59 @@ use std::path::PathBuf;
 use crate::file_system_library::FileSystemLibrary;
 
 type Error = Box<dyn std::error::Error>;
+type FError = Box<dyn Fn(Error)>;
 
-pub struct FileSystemRepositorySource {
-   path: Vec<OsString>,
+pub struct FileSystemRepositorySourceItem
+{
+   path: OsString,
+   action_if_build_error: FError
 }
 
-impl FileSystemRepositorySource {
+impl FileSystemRepositorySourceItem{
+   pub fn new(path: OsString, action_if_build_error: FError) -> Self {
+      Self {
+         path,
+         action_if_build_error,
+      }
+   }
+}
+
+pub struct FileSystemRepositorySource
+{
+   path: Vec<FileSystemRepositorySourceItem>,
+}
+
+impl FileSystemRepositorySource
+{
    pub fn new() -> Self {
       Self {
          path: Vec::new(),
       }
    }
 
-   pub fn add_file_path(&mut self, path: OsString) -> &mut Self {
-      self.path.push(path);
+   pub fn add_file_path(mut self, path: OsString) -> Self {
+      self.path.push(FileSystemRepositorySourceItem::new(
+         path, 
+         Box::new(|_| {}),
+      ));
 
       self
    }
 
-   fn add_files_from_dir_common<F, K>(&mut self, dir: OsString, file_filter: F, file_maker: K) -> Result<&mut Self, Error>
+   pub fn add_file_path_and_action_if_build_error(mut self, path: OsString, action_if_build_error: FError) -> Self
+   {
+      self.path.push(FileSystemRepositorySourceItem::new(
+         path, 
+         action_if_build_error,
+      ));
+
+      self
+   }
+
+   fn add_files_from_dir_common<F, K>(mut self, dir: OsString, file_filter: F, file_maker: K) -> Result<Self, Error>
    where
       F: Fn(&PathBuf) -> bool,
-      K: Fn(PathBuf) -> OsString,
+      K: Fn(PathBuf) -> FileSystemRepositorySourceItem,
    {
       let dir = match std::fs::read_dir(dir) {
          Ok(dir) => dir,
@@ -65,29 +96,39 @@ impl FileSystemRepositorySource {
       }
    }
 
-   pub fn add_files_from_dir<K>(&mut self, dir: OsString, extension: OsString, file_maker: K) -> Result<&mut Self, Error>
+   pub fn add_files_from_dir<K>(self, dir: OsString, extension: OsString, file_maker: K) -> Result<Self, Error>
    where
-      K: Fn(PathBuf) -> OsString,
+      K: Fn(PathBuf) -> FileSystemRepositorySourceItem,
    {
-      self.add_files_from_dir_common(dir, Self::filter_by_extension(extension), file_maker)
+      self.add_files_from_dir_common(
+         dir,
+         Self::filter_by_extension(extension),
+         file_maker
+      )
    }
+}
 
-   pub fn build<'a, F>(&mut self, action_for_error: F) -> Vec<FileSystemLibrary>
-   where
-      F: Fn(Error)
-   {
-      let col = self.path.iter()
+impl IntoIterator for FileSystemRepositorySource {
+    type Item = FileSystemLibrary;
+    type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+       let sdf = self.path.into_iter()
          .filter_map(|x| {
-            match FileSystemLibrary::new(x.to_os_string()) {
-               Ok(x) => Some(x),
+            let path = x.path;
+            let action_if_error = x.action_if_build_error;
+
+            match FileSystemLibrary::new(path) {
+               Ok(x) => Some(
+                  x
+               ),
                Err(e) => {
-                  action_for_error(e);
+                  action_if_error(e);
                   None
-               },
-            }
-         })
-         .collect();
-      
-      col
-   }
+               }
+         }});
+
+         Box::new(sdf)
+    }
 }
