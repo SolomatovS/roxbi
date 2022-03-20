@@ -1,9 +1,11 @@
 #![allow(dead_code)]
 
-use std::ffi::OsString;
-use std::path::PathBuf;
+use std::{array::IntoIter, path::Iter};
+pub use std::ffi::OsString;
+pub use std::path::PathBuf;
 
 use crate::file_system_library::FileSystemLibrary;
+use ilibrary::{IRepositoryLibrarySource, ILibrary};
 
 type Error = Box<dyn std::error::Error>;
 type FError = Box<dyn Fn(Error)>;
@@ -14,7 +16,7 @@ pub struct FileSystemRepositorySourceItem
    action_if_build_error: FError
 }
 
-impl FileSystemRepositorySourceItem{
+impl FileSystemRepositorySourceItem {
    pub fn new(path: OsString, action_if_build_error: FError) -> Self {
       Self {
          path,
@@ -23,10 +25,12 @@ impl FileSystemRepositorySourceItem{
    }
 }
 
+
 pub struct FileSystemRepositorySource
 {
    path: Vec<FileSystemRepositorySourceItem>,
 }
+
 
 impl FileSystemRepositorySource
 {
@@ -109,26 +113,23 @@ impl FileSystemRepositorySource
 }
 
 impl IntoIterator for FileSystemRepositorySource {
-    type Item = FileSystemLibrary;
-    type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
+   type Item = FileSystemLibrary;
+   type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
+   fn into_iter(self) -> Self::IntoIter
+   {
+      Box::new(self.path.into_iter()
+      .filter_map(|x| {
+         let path = x.path;
+         let action_if_error = x.action_if_build_error;
 
-    fn into_iter(self) -> Self::IntoIter
-    {
-       let sdf = self.path.into_iter()
-         .filter_map(|x| {
-            let path = x.path;
-            let action_if_error = x.action_if_build_error;
-
-            match FileSystemLibrary::new(path) {
-               Ok(x) => Some(
-                  x
-               ),
-               Err(e) => {
-                  action_if_error(e);
-                  None
-               }
-         }});
-
-         Box::new(sdf)
-    }
+         match FileSystemLibrary::new(path) {
+            Ok(x) => Some(
+               x
+            ),
+            Err(e) => {
+               action_if_error(e);
+               None
+            }
+      }}))
+   }
 }

@@ -25,19 +25,14 @@ impl FileSystemLibrary {
             Ok(Library::new(path)?)
         }
     }
-
 }
 
 impl ILibrary for FileSystemLibrary {
-    type Item = Library;
 
-    fn get(&self) -> &Self::Item {
-        &(self.lib)
-    }
 }
 
 impl Display for FileSystemLibrary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"{:?}",self.path)
+        write!(f, "{:p} ({:?})", &self, self.path)
     }
 }
