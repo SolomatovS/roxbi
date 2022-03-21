@@ -5,7 +5,7 @@ pub use std::ffi::OsString;
 pub use std::path::PathBuf;
 
 use crate::file_system_library::FileSystemLibrary;
-use ilibrary::{IRepositoryLibrarySource, ILibrary};
+use ilibrary::{IRepositoryLibrarySource, ILibrary, ILibraryBuilder};
 
 type Error = Box<dyn std::error::Error>;
 type FError = Box<dyn Fn(Error)>;
@@ -25,12 +25,17 @@ impl FileSystemRepositorySourceItem {
    }
 }
 
+impl ILibraryBuilder for FileSystemRepositorySourceItem {
+   fn build<'a>(self) -> Box<dyn Fn(u32) -> Box<dyn ILibrary>>
+   {
+      Box::new(move |id| Box::new(FileSystemLibrary::new(id, self.path.clone())))
+   }
+}
 
 pub struct FileSystemRepositorySource
 {
    path: Vec<FileSystemRepositorySourceItem>,
 }
-
 
 impl FileSystemRepositorySource
 {
@@ -111,7 +116,7 @@ impl FileSystemRepositorySource
       )
    }
 }
-
+/*
 impl IntoIterator for FileSystemRepositorySource {
    type Item = FileSystemLibrary;
    type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
@@ -122,6 +127,8 @@ impl IntoIterator for FileSystemRepositorySource {
          let path = x.path;
          let action_if_error = x.action_if_build_error;
 
+         let b = x.build();
+         
          match FileSystemLibrary::new(path) {
             Ok(x) => Some(
                x
@@ -133,3 +140,4 @@ impl IntoIterator for FileSystemRepositorySource {
       }}))
    }
 }
+*/

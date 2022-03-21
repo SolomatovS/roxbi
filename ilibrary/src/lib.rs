@@ -1,8 +1,20 @@
-use std::array::IntoIter;
-
 type Error = Box<dyn std::error::Error>;
 
 pub trait ILibrary {
+   fn id(&self) -> u32;
+   fn reload(&mut self) -> Result<(), Error>;
+   fn check(&self) -> Result<(), Error>;
+}
+
+impl PartialEq for dyn ILibrary + '_  {
+   fn eq(&self, other: &Self) -> bool {
+      self.id() == other.id()
+  }
+}
+impl Eq for dyn ILibrary + '_ {}
+
+pub trait ILibraryBuilder {
+   fn build<'a>(self) -> Box<dyn Fn(u32) -> Box<dyn ILibrary>>;
 }
 
 pub trait IRepositoryLibrarySource : IntoIterator {
@@ -10,38 +22,47 @@ pub trait IRepositoryLibrarySource : IntoIterator {
 }
 
 pub struct RepositoryLibrary {
-    pub source_library: Vec<Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>>,
-    pub builded_library: Vec<Box<dyn ILibrary>>,
- }
+   source: Vec<Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>>,
+   cache: Vec<Box<dyn ILibrary>>,
+}
  
- impl RepositoryLibrary {
-    pub fn builder() -> RepositoryLibraryBuilder {
-       RepositoryLibraryBuilder {
-          source: vec![]
-       }
-    }
- }
+impl RepositoryLibrary {
+   pub fn new() -> Self {
+      Self {
+         source: vec![],
+         cache: vec![],
+      }
+   }
 
+   pub fn add_source(mut self, source: Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>) -> Self {
+      self.source.push(source);
+
+      self
+   }
+}
+
+
+
+/*
 pub struct RepositoryLibraryBuilder
 {
-   source: Vec<Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>>
+   source: Vec<Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>>,
 }
 
 
 impl RepositoryLibraryBuilder {
-    pub fn build(self) -> RepositoryLibrary {
-        let libs = self.source.iter().flat_map(|x| x.iter());
+   pub fn build(self) -> RepositoryLibrary {
+      RepositoryLibrary {
+         source_library: self.source,
+         cache: vec![],
+      }
+   }
 
-       RepositoryLibrary {
-        source_library: self.source,
-        builded_library: libs.iter().collect(),
-       }
-    }
- 
-     pub fn add_source(mut self, source: Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>) -> Self {
-       self.source.push(source);
- 
-       self
-    }
- }
+   pub fn add_source(mut self, source: Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>) -> Self {
+      self.source.push(source);
+
+      self
+   }
+}
+*/
  

@@ -7,17 +7,19 @@ use ilibrary::ILibrary;
 
 type Error = Box<dyn std::error::Error>;
 
-pub struct  FileSystemLibrary{
+pub struct  FileSystemLibrary {
+    id: u32,
     path: OsString,
-    lib: Library,
+    lib: Option<Library>,
 }
 
 impl FileSystemLibrary {
-    pub fn new(path: OsString) -> Result<Self, Error> {
-        Ok(Self {
-            lib: Self::build(&path)?,
+    pub fn new(id:u32, path: OsString) -> Self {
+        Self {
+            id,
+            lib: None, //Self::build(&path)?,
             path,
-        })
+        }
     }
 
     fn build(path: &OsString) -> Result<Library, Error> {
@@ -28,7 +30,21 @@ impl FileSystemLibrary {
 }
 
 impl ILibrary for FileSystemLibrary {
+    fn id(&self) -> u32 {
+        self.id
+    }
 
+    fn reload(&mut self) -> Result<(), Error> {
+        self.lib = Some(Self::build(&self.path)?);
+
+        Ok(())
+    }
+
+    fn check(&self) -> Result<(), Error> {
+        Self::build(&self.path)?;
+
+        Ok(())
+    }
 }
 
 impl Display for FileSystemLibrary {

@@ -5,7 +5,7 @@ mod helpers;
 use std::ffi::OsString;
 
 use file_system_library::file_system_repository_source::{FileSystemRepositorySource};
-use ilibrary::{ILibrary, RepositoryLibrary, RepositoryLibraryBuilder};
+use ilibrary::{ILibrary, RepositoryLibrary};
 
 fn main() {
     let s = FileSystemRepositorySource::new()
@@ -26,9 +26,8 @@ fn main() {
     */
     ;
 
-    let builder = RepositoryLibrary::builder();
-
+    let builder = RepositoryLibrary::new();
+    
     builder
-        .add_source(s.into_iter());
-
+        .add_source(s);
 }
