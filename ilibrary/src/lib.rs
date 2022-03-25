@@ -15,7 +15,7 @@ impl PartialEq for dyn ILibrary + '_  {
 
 impl Eq for dyn ILibrary + '_ {}
 
-pub trait ILibraryBuilder {
+pub trait ILibraryGenerator {
    fn generate(&self) -> Box<dyn ILibrary>;
 }
 
@@ -42,7 +42,7 @@ impl RepositoryLibrary {
       self
    }
 
-   pub fn generate_and_update_libs(mut self) {
+   pub fn build_missing_libs(mut self) {
       let new_libs: Vec<Box<dyn ILibrary>> = self.sources.iter()
          .flat_map(|x| x.generate())
          .collect();
