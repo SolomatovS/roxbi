@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 
-use std::{array::IntoIter, path::Iter};
 pub use std::ffi::OsString;
 pub use std::path::PathBuf;
 
 use crate::file_system_library::FileSystemLibrary;
-use ilibrary::{IRepositoryLibrarySource, ILibrary, ILibraryBuilder};
+use ilibrary::{ILibrarySource, ILibrary, ILibraryBuilder};
 
 type Error = Box<dyn std::error::Error>;
 type FError = Box<dyn Fn(Error)>;
@@ -26,9 +25,14 @@ impl FileSystemRepositorySourceItem {
 }
 
 impl ILibraryBuilder for FileSystemRepositorySourceItem {
-   fn build<'a>(self) -> Box<dyn Fn(u32) -> Box<dyn ILibrary>>
+   fn generate(&self) -> Box<dyn ILibrary>
    {
-      Box::new(move |id| Box::new(FileSystemLibrary::new(id, self.path.clone())))
+      Box::new(
+         FileSystemLibrary::new(
+            self.path.clone(),
+            self.path.clone(),
+         )
+      )
    }
 }
 
@@ -116,28 +120,12 @@ impl FileSystemRepositorySource
       )
    }
 }
-/*
-impl IntoIterator for FileSystemRepositorySource {
-   type Item = FileSystemLibrary;
-   type IntoIter = Box<dyn Iterator<Item = Self::Item>>;
-   fn into_iter(self) -> Self::IntoIter
-   {
-      Box::new(self.path.into_iter()
-      .filter_map(|x| {
-         let path = x.path;
-         let action_if_error = x.action_if_build_error;
 
-         let b = x.build();
-         
-         match FileSystemLibrary::new(path) {
-            Ok(x) => Some(
-               x
-            ),
-            Err(e) => {
-               action_if_error(e);
-               None
-            }
-      }}))
+impl ILibrarySource for FileSystemRepositorySource {
+   fn generate(&self) -> Vec<Box<dyn ILibrary>> {
+      self.path.iter()
+         .map(|x| {
+            x.generate()
+         }).collect()
    }
 }
-*/

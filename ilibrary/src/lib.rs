@@ -1,68 +1,58 @@
+use std::{ffi::OsStr};
 type Error = Box<dyn std::error::Error>;
 
 pub trait ILibrary {
-   fn id(&self) -> u32;
    fn reload(&mut self) -> Result<(), Error>;
    fn check(&self) -> Result<(), Error>;
+   fn identifier(&self) -> &OsStr;
 }
 
 impl PartialEq for dyn ILibrary + '_  {
    fn eq(&self, other: &Self) -> bool {
-      self.id() == other.id()
+      self.identifier() == other.identifier()
   }
 }
+
 impl Eq for dyn ILibrary + '_ {}
 
 pub trait ILibraryBuilder {
-   fn build<'a>(self) -> Box<dyn Fn(u32) -> Box<dyn ILibrary>>;
+   fn generate(&self) -> Box<dyn ILibrary>;
 }
 
-pub trait IRepositoryLibrarySource : IntoIterator {
-
+pub trait ILibrarySource {
+   fn generate(&self) -> Vec<Box<dyn ILibrary>>;
 }
 
 pub struct RepositoryLibrary {
-   source: Vec<Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>>,
-   cache: Vec<Box<dyn ILibrary>>,
+   sources: Vec<Box<dyn ILibrarySource>>,
+   libs: Vec<Box<dyn ILibrary>>,
 }
- 
+
 impl RepositoryLibrary {
    pub fn new() -> Self {
       Self {
-         source: vec![],
-         cache: vec![],
+         sources: vec![],
+         libs: vec![],
       }
    }
 
-   pub fn add_source(mut self, source: Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>) -> Self {
-      self.source.push(source);
+   pub fn add_source<'a>(mut self, source: Box<dyn ILibrarySource>) -> Self {
+      self.sources.push(source);
 
       self
    }
-}
 
-
-
-/*
-pub struct RepositoryLibraryBuilder
-{
-   source: Vec<Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>>,
-}
-
-
-impl RepositoryLibraryBuilder {
-   pub fn build(self) -> RepositoryLibrary {
-      RepositoryLibrary {
-         source_library: self.source,
-         cache: vec![],
-      }
-   }
-
-   pub fn add_source(mut self, source: Box<dyn IRepositoryLibrarySource<Item = Box<dyn ILibrary>, IntoIter = Box<dyn Iterator<Item = Box<dyn ILibrary>>>>>) -> Self {
-      self.source.push(source);
-
-      self
+   pub fn generate_and_update_libs(mut self) {
+      let new_libs: Vec<Box<dyn ILibrary>> = self.sources.iter()
+         .flat_map(|x| x.generate())
+         .collect();
+      
+      new_libs.into_iter()
+         .for_each(|x| {
+            let exist = self.libs.iter().any(|l| l.identifier() == x.identifier());
+            if !exist {
+               self.libs.push(x);
+            }
+         });
    }
 }
-*/
- 

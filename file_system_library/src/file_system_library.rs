@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{ffi::OsString, fmt::Display};
+use std::{ffi::{OsString, OsStr}, fmt::Display};
 use libloading::Library;
 use ilibrary::ILibrary;
 
@@ -8,17 +8,17 @@ use ilibrary::ILibrary;
 type Error = Box<dyn std::error::Error>;
 
 pub struct  FileSystemLibrary {
-    id: u32,
     path: OsString,
     lib: Option<Library>,
+    source_identifier: OsString,
 }
 
 impl FileSystemLibrary {
-    pub fn new(id:u32, path: OsString) -> Self {
+    pub fn new(path: OsString, source_identifier: OsString) -> Self {
         Self {
-            id,
-            lib: None, //Self::build(&path)?,
+            lib: None,
             path,
+            source_identifier,
         }
     }
 
@@ -30,10 +30,6 @@ impl FileSystemLibrary {
 }
 
 impl ILibrary for FileSystemLibrary {
-    fn id(&self) -> u32 {
-        self.id
-    }
-
     fn reload(&mut self) -> Result<(), Error> {
         self.lib = Some(Self::build(&self.path)?);
 
@@ -45,6 +41,10 @@ impl ILibrary for FileSystemLibrary {
 
         Ok(())
     }
+
+    fn identifier(&self) -> &OsStr {
+        &self.source_identifier
+    }
 }
 
 impl Display for FileSystemLibrary {
@@ -52,3 +52,4 @@ impl Display for FileSystemLibrary {
         write!(f, "{:p} ({:?})", &self, self.path)
     }
 }
+
