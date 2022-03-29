@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 pub use std::ffi::OsString;
-use std::{fs::ReadDir, rc::Rc};
+use std::{fs::ReadDir, rc::Rc, ffi::OsStr, cell::RefCell, borrow::{Borrow, BorrowMut}};
 pub use std::path::PathBuf;
 
 use crate::file_system_library::FileSystemLibrary;
@@ -35,41 +35,34 @@ impl ILibraryGenerator for FileSystemRepositorySourceItem {
    }
 }
 
-
-struct ReadDirSource
+/*
+pub struct ReadDirSource
 {
    dir: OsString,
    source: FileSystemRepositorySource,
-   filter: Vec<Rc<Box<dyn FnMut(&PathBuf) -> bool>>>,
-   action_if_error: Option<Box<dyn Fn(std::io::Error)>>,
-   maker: Box<dyn Fn(PathBuf) -> FileSystemRepositorySourceItem>,
+   filter: Option<Rc<RefCell<dyn FnMut(&PathBuf) -> bool>>>,
+   action_if_error: Option<Rc<dyn Fn(std::io::Error)>>,
 }
 
 impl ReadDirSource
 {
-   fn new(source: FileSystemRepositorySource, dir: OsString, maker: Box<dyn Fn(PathBuf) -> FileSystemRepositorySourceItem>) -> Self {
+   fn new(source: FileSystemRepositorySource, dir: OsString) -> Self {
       Self {
          dir,
          source,
-         filter: vec![],
+         filter: None,
          action_if_error: None,
-         maker,
       }
    }
 
-   fn filter_by_extension(mut self, extension: OsString) -> Self {
-      let lambda = move |x: &PathBuf| {
-         match x.extension() {
-            Some(f) => f == extension,
-            None => false,
-      }};
-
-      self.filter.push(Rc::new(Box::new(lambda) as Box<dyn FnMut(&PathBuf) -> bool>));
+   fn set_filter(mut self, callback: Rc<RefCell<dyn FnMut(&PathBuf) -> bool>>) -> Self
+   {
+      self.filter = Some(callback);
       
       self
    }
 
-   fn if_error_then(mut self, action: Box<dyn Fn(std::io::Error)>) -> Self {
+   fn if_error_then(mut self, action: Rc<dyn Fn(std::io::Error)>) -> Self {
       self.action_if_error = Some(action);
 
       self
@@ -87,12 +80,20 @@ impl ReadDirSource
             return self.source
       }};
 
-      let files = dir.into_iter()
+      let filter = match self.filter {
+         Some(filter) => filter,
+         None => return self.source,
+      };
+
+      let mut filter = (*filter).borrow_mut();
+      
+      let action = &self.action_if_error;
+      let files: Vec<PathBuf> = dir.into_iter()
          .filter_map(|path| {
             match path {
-               Ok(p) => Some(p.path()),
+               Ok(path) => Some(path.path()),
                Err(e) => {
-                  if let Some(a) = self.action_if_error {
+                  if let Some(a) = action {
                      a(e);
                   }
                   
@@ -100,15 +101,126 @@ impl ReadDirSource
                }
             }
          })
-         .filter(|path| path.is_file());
+         .filter(|path| path.is_file())
+         .filter(|p| -> bool {
+            (*filter)(p)
+         })
+         .collect();
 
-      self.filter.into_iter().for_each(|f| {
-         files.filter(*f);
-      });
+      for path in files {
+            self.source.add_file_path(path.into_os_string());
+      }
+      
+      self.source
+   }
+}
+*/
 
-      files.for_each(|x| {
-         self.source.path.push((self.maker)(x));
-      });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub struct ReadDirSource<'a>
+{
+   dir: &'a OsStr,
+   source: &'a FileSystemRepositorySource,
+   filter: Option<Box<dyn FnMut(&PathBuf) -> bool>>,
+   action_if_error: Option<Box<dyn Fn(std::io::Error)>>,
+}
+
+impl<'a> ReadDirSource<'a>
+{
+   fn new(source: &'a FileSystemRepositorySource, dir: &'a OsStr) -> Self {
+      Self {
+         dir,
+         source,
+         filter: None,
+         action_if_error: None,
+      }
+   }
+/*
+   fn set_filter(mut self, callback: Rc<RefCell<dyn FnMut(&PathBuf) -> bool>>) -> Self
+   {
+      self.filter = Some(callback);
+      
+      self
+   }
+*/
+   fn set_filter<F>(&mut self, callback: &'a F) -> &mut Self
+   where F: FnMut(&PathBuf) -> bool
+   {
+      /*
+      let f = Rc::new(RefCell::new(callback));
+      self.filter = Some(f);
+      
+      self
+      */
+      self
+   }
+
+   fn if_error_then<F>(&mut self, callback: &'a F) -> &mut Self
+   where F: Fn(std::io::Error)
+   {
+      //self.action_if_error = Some(action);
+
+      self
+   }
+
+   fn build(mut self) -> &'a FileSystemRepositorySource
+   {
+      let dir = match std::fs::read_dir(self.dir.clone()) {
+         Ok(dir) => dir,
+         Err(e) => {
+            if let Some(a) = self.action_if_error {
+               a(e);
+            }
+            
+            return self.source
+      }};
+
+      let mut filter = match self.filter {
+         Some(filter) => filter,
+         None => return self.source,
+      };
+      
+      let action = &self.action_if_error;
+      let files: Vec<PathBuf> = dir.into_iter()
+         .filter_map(|path| {
+            match path {
+               Ok(path) => Some(path.path()),
+               Err(e) => {
+                  if let Some(a) = action {
+                     a(e);
+                  }
+                  
+                  None
+               }
+            }
+         })
+         .filter(|path| path.is_file())
+         .filter(|p| -> bool {
+            (*filter)(p)
+         })
+         .collect();
+
+      /*
+      for path in files {
+            &(self.source).add_file_path(path.clone().into_os_string());
+      }
+      */
       
       self.source
    }
@@ -127,12 +239,17 @@ impl ReadDirSource
 */
 }
 
+
+
+
+
+
 pub struct FileSystemRepositorySource
 {
    path: Vec<FileSystemRepositorySourceItem>,
 }
 
-impl FileSystemRepositorySource
+impl<'a> FileSystemRepositorySource
 {
    pub fn new() -> Self {
       Self {
@@ -140,7 +257,7 @@ impl FileSystemRepositorySource
       }
    }
 
-   pub fn add_file_path(mut self, path: OsString) -> Self {
+   pub fn add_file_path(&mut self, path: OsString) -> &mut Self {();
       self.path.push(FileSystemRepositorySourceItem::new(
          path
       ));
@@ -148,13 +265,12 @@ impl FileSystemRepositorySource
       self
    }
 
-   fn read_dir<'a, E>(self, dir: OsString, maker: E) -> ReadDirSource
-   where
-      E: Fn(PathBuf) -> FileSystemRepositorySourceItem,
+   
+   pub fn read_dir(&'a mut self, dir: &'a OsStr) -> ReadDirSource<'a>
    {
-      ReadDirSource::new(self, dir, Box::new(maker))
+      ReadDirSource::new(self, dir)
    }
-
+   
    fn add_files_from_dir_common<F, K, E>(mut self, dir: ReadDir, file_filter: F, file_maker: K, action_if_error: E) -> Self
    where
       F: Fn(&PathBuf) -> bool,
