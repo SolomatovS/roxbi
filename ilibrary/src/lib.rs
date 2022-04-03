@@ -16,7 +16,7 @@ impl PartialEq for dyn ILibrary + '_  {
 impl Eq for dyn ILibrary + '_ {}
 
 pub trait ILibraryGenerator {
-   fn generate(&self) -> Box<dyn ILibrary>;
+   fn generate(&self) -> Vec<Box<dyn ILibrary>>;
 }
 
 pub trait ILibrarySource {
