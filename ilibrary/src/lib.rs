@@ -1,8 +1,8 @@
-use std::{ffi::OsStr};
+use std::{ffi::OsStr, fmt::Display};
 type Error = Box<dyn std::error::Error>;
 
 pub trait ILibrary {
-   fn reload(&mut self) -> Result<(), Error>;
+   fn load(&mut self) -> Result<(), Error>;
    fn check(&self) -> Result<(), Error>;
    fn identifier(&self) -> &OsStr;
 }
@@ -14,6 +14,12 @@ impl PartialEq for dyn ILibrary + '_  {
 }
 
 impl Eq for dyn ILibrary + '_ {}
+
+impl Display for dyn ILibrary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.identifier())
+    }
+}
 
 pub trait ILibraryGenerator {
    fn generate(&self) -> Vec<Box<dyn ILibrary>>;
