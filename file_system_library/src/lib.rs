@@ -88,27 +88,27 @@ pub struct FileSystemLibrarySource
 
 impl FileSystemLibrarySource
 {
-   pub fn new() -> Self {
-      Self {
-         generators: Vec::new(),
-      }
-   }
+    pub fn new() -> Self {
+        Self {
+            generators: Vec::new(),
+        }
+    }
 
-   pub fn from_file(mut self, path: OsString) -> Self {
-      let generator = FileSystemLibraryGenerator::new(path);
+    pub fn from_file(mut self, path: OsString) -> Self {
+        let generator = FileSystemLibraryGenerator::new(path);
 
-      self.generators.push(Box::new(generator));
+        self.generators.push(Box::new(generator));
 
-      self
-   }
+        self
+    }
 
-   pub fn from_dir(self, dir: OsString) -> DirSourceBuilder {
-      DirSourceBuilder::new(self, dir)
-   }
+    pub fn from_dir(self, dir: OsString) -> DirSourceBuilder {
+        DirSourceBuilder::new(self, dir)
+    }
 
-   pub fn add_source(&mut self, source: Box<dyn ILibraryGenerator>) {
-      self.generators.push(source);
-   }
+    fn add_source(&mut self, source: Box<dyn ILibraryGenerator>) {
+        self.generators.push(source);
+    }
 }
 
 impl ILibrarySource for FileSystemLibrarySource {
