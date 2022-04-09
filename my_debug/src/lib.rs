@@ -10,5 +10,5 @@ macro_rules! debug_print {
 // Non-debug version
 #[cfg(not(feature = "my_debug"))]
 macro_rules! debug_print {
-    ($( $args:expr ),*) => {}
+    ($( $args:expr ),*) => {};
 }

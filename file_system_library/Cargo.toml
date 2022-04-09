@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 libloading = "0.7"
-ilibrary = { path = "../ilibrary", version = "*" }
+lib = { path = "../lib", version = "*" }

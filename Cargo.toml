@@ -2,7 +2,7 @@
 members = [
     "host",
     "my_debug",
-    "ilibrary",
+    "lib",
     "file_system_library",
     "isay_hello",
     "say_hello_console"

@@ -1,30 +1,29 @@
+use libloading::{Library, Symbol};
+use std::boxed::Box;
+use std::error::Error;
+use std::ffi::OsString;
 use std::os::unix::prelude::OsStrExt;
 use std::{collections::HashMap, ffi::OsStr};
-use std::ffi::OsString;
-use std::error::Error;
-use std::boxed::Box;
-use libloading::{Library, Symbol};
 
 pub struct DynamicLibraryManager {
-    library: HashMap<OsString, Library>
+    library: HashMap<OsString, Library>,
 }
 
 impl DynamicLibraryManager {
-    pub fn add_library(&mut self, path: OsString) -> Result<(), Box<dyn Error>>
-    {
+    pub fn add_library(&mut self, path: OsString) -> Result<(), Box<dyn Error>> {
         let lib: Library;
         unsafe {
             lib = Library::new(path.as_os_str())?;
         }
-        
+
         self.library.insert(path, lib);
 
         Ok(())
     }
 
-    pub fn find_symbol<T>(&self, symbol: &OsStr) -> Vec<Symbol<T>>
-    {
-        self.library.iter()
+    pub fn find_symbol<T>(&self, symbol: &OsStr) -> Vec<Symbol<T>> {
+        self.library
+            .iter()
             .filter_map(|x| {
                 let sym;
                 unsafe {
@@ -39,14 +38,11 @@ impl DynamicLibraryManager {
                         None
                     }
                 }
-
             })
             .collect()
     }
 
     pub fn new() -> Self {
-        Self {
-            library: HashMap::new()
-        }
+        Self { library: HashMap::new() }
     }
 }
