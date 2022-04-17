@@ -1,35 +1,30 @@
-use std::{ffi::OsStr, fmt::Display};
-type Error = Box<dyn std::error::Error>;
+use std::ffi::OsStr;
+use std::error::Error;
+
 
 pub trait ILibrary {
-    fn load(&mut self) -> Result<(), Error>;
-    fn check(&self) -> Result<(), Error>;
-    fn identifier(&self) -> &OsStr;
+    fn id(&self) -> &OsStr;
 }
 
 impl PartialEq for dyn ILibrary + '_ {
     fn eq(&self, other: &Self) -> bool {
-        self.identifier() == other.identifier()
+        self.id() == other.id()
     }
 }
 
 impl Eq for dyn ILibrary + '_ {}
 
-impl Display for dyn ILibrary {
+impl std::fmt::Display for dyn ILibrary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.identifier())
+        write!(f, "{:?}", self.id())
     }
 }
 
-pub trait ILibraryGenerator {
-    fn generate(&self) -> Box<dyn ILibrary>;
-}
-
 pub trait ILibrarySource {
-    fn generate(&self) -> Vec<Box<dyn ILibrary>>;
+    fn generate(&self) -> (Vec<Box<dyn ILibrary>>, Vec<Box<dyn Error>>) ;
 }
 
-pub struct RepositoryLibrary {
+/*pub struct RepositoryLibrary {
     sources: Vec<Box<dyn ILibrarySource>>,
     libs: Vec<Box<dyn ILibrary>>,
 }
@@ -39,20 +34,21 @@ impl RepositoryLibrary {
         Self { sources: vec![], libs: vec![] }
     }
 
-    pub fn add_source<'a>(mut self, source: Box<dyn ILibrarySource>) -> Self {
+    pub fn add_source(mut self, source: Box<dyn ILibrarySource>) -> Self {
         self.sources.push(source);
 
         self
     }
 
-    pub fn build_missing_libs(mut self) {
-        let new_libs: Vec<Box<dyn ILibrary>> = self.sources.iter().flat_map(|x| x.generate()).collect();
+    pub fn build_missing_libs(&mut self) {
+        let new_libs: Vec<Box<dyn ILibrary>> = self.sources.iter()
+            .flat_map(|x| x.generate()).into_iter().collect();
 
-        new_libs.into_iter().for_each(|x| {
-            let exist = self.libs.iter().any(|l| l.identifier() == x.identifier());
-            if !exist {
+        new_libs.into_iter().for_each(|x|
+            if !self.libs.iter().any(|l| l.id() == x.id()) {
                 self.libs.push(x);
             }
-        });
+        );
     }
 }
+*/

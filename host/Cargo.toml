@@ -8,4 +8,4 @@ edition = "2018"
 libloading = "0.7"
 isay_hello = { path = "../isay_hello", version = "*" }
 lib = { path = "../lib", version = "*" }
-file_system_library = { path = "../file_system_library", version = "*" }
+fslib = { path = "../fslib", version = "*" }

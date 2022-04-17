@@ -2,8 +2,9 @@
 members = [
     "host",
     "my_debug",
+    "iter_help",
     "lib",
-    "file_system_library",
+    "fslib",
     "isay_hello",
     "say_hello_console"
 ]

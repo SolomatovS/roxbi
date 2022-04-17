@@ -1,48 +1,34 @@
 mod helpers;
 
-use file_system_library::FileSystemSource;
+use fslib::FileSystemSource;
 use lib::ILibrarySource;
-use std::rc::Rc;
-use std::{ffi::OsString, path::PathBuf};
+use std::error::Error;
+use std::path::PathBuf;
 
 fn main() {
-    let filter = Rc::new(|path: &PathBuf| {
+    let filter = |path: &PathBuf| {
         if let Some(extension) = path.extension() {
             return extension == "dylib";
         }
 
         false
-    });
-
-    let if_error = Rc::new(|error| {
+    };
+    
+    let if_error = |error: &Box<dyn Error>| {
         println!("{:?}", &error);
-    });
-
-    let clone_filter = Rc::clone(&filter);
-    let clone_error = Rc::clone(&if_error);
+    };
 
     let source = FileSystemSource::new()
-        .from_file(OsString::from(
-            "/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib",
-        ))
-        .from_file(OsString::from(
-            "/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib1",
-        ))
-        .from_dir(OsString::from("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug"))
-        .filter_by(clone_filter)
-        .if_error_read(clone_error)
-        .read_files()
-        .from_file(OsString::from(
-            "/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib1",
-        ));
+        .from_file("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib".into())
+        .from_file("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib1".into())
+        .from_dir("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug".into())
+            .filter_by(filter)
+            .if_error_read(if_error)
+        .from_file("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib2".into())
+        .build();
 
-    let mut libraries = source.generate();
+    let (files, errors) = source.generate();
 
-    libraries.iter_mut().for_each(|f| {
-        if let Err(e) = f.load() {
-            println!("failed loadL {}", &e);
-        } else {
-            println!("success loaded: {}", &f);
-        }
-    });
+    errors.iter().for_each(|e| println!("error: {:?}", &e));
+    files.iter().for_each(|f| println!("success: {}", &f));
 }

@@ -1,5 +1,5 @@
 [package]
-name = "file_system_library"
+name = "fslib"
 version = "0.1.0"
 authors = ["solomatovs <solomatovs@gmail.com>"]
 edition = "2018"
@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 libloading = "0.7"
 lib = { path = "../lib", version = "*" }
+iter_help = { path = "../iter_help", varsion = "*" }
