@@ -39,13 +39,6 @@ impl FileSystemSourceEnum {
     }
 }
 
-/*
-pub enum FileSystemSource {
-    Cons(FileSystemSourceEnum, Box<Self>),
-    Nil,
-}
-*/
-
 pub struct FileSystemSource {
     pub (crate) source: Vec<FileSystemSourceEnum>
 }
@@ -65,30 +58,6 @@ impl FileSystemSource {
         DirSourceBuilder::new(self, dir)
     }
 }
-
-/*
-impl ILibrarySource for FileSystemSource {
-    fn generate(&self) -> Result<Vec<Box<dyn ILibrary>>, Box<dyn Error>> {
-        let mut vec = vec![];
-        match *self {
-            Self::Cons(ref val,ref todo) => {
-                match val.generate() {
-                    Ok(mut val) => vec.append(&mut val),
-                    Err(e) => return Err(e),
-                }
-                
-                match todo.generate() {
-                    Ok(mut val) => vec.append(&mut val),
-                    Err(e) => return Err(e),
-                }
-            },
-            _ => {},
-        };
-
-        Ok(vec)
-    }
-}
-*/
 
 impl ILibrarySource for FileSystemSource {
     fn generate(&self) -> (Vec<Box<dyn ILibrary>>, Vec<Box<dyn Error>>) {

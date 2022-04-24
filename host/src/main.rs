@@ -25,7 +25,8 @@ fn main() {
             .filter_by(filter)
             .if_error_read(if_error)
         .from_file("/Users/solomatovs/Documents/GitHub/roxbi/say_hello_console/target/debug/libsay_hello_console.dylib2".into())
-        .build();
+        .build()
+    ;
 
     let (files, errors) = source.generate();
 

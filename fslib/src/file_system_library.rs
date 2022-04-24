@@ -1,6 +1,7 @@
 use std::ffi::{OsStr, OsString};
 use std::fmt::{Display};
 use std::boxed::Box;
+use std::os::unix::ffi::OsStrExt;
 
 use lib::ILibrary;
 use libloading::{Library, Symbol};
@@ -28,26 +29,11 @@ impl FileSystemLibrary {
     fn build(path: &OsString) -> Result<Library, Error> {
         unsafe { Ok(Library::new(path)?) }
     }
-/*
-    fn build_if_needed(&mut self) -> Result<(), Error> {
-        if let None = self.lib {
-            self.lib = Some(Self::build(&self.path)?);
-        }
 
-        Ok(())
-    }
-*/
-    fn find<T>(&mut self, symbol: &OsStr) -> Result<Symbol<T>, Error> {
-        todo!()
-        /*
-        if let Some(lib) = &self.lib {
-            unsafe {
-                return Ok(lib.get(symbol.as_bytes())?);
-            }
-        } else {
-            return Err(Box::new(SymbolError::SymbolNotFound));
+    pub fn find<T>(&self, symbol: &OsStr) -> Result<Symbol<T>, Error> {
+        unsafe {
+            return Ok(self.lib.get(symbol.as_bytes())?);
         }
-        */
     }
 }
 
