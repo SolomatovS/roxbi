@@ -12,17 +12,17 @@ pub struct FileSystemLibrary {
     path: OsString,
     lib: Library,
     //symbols: HashMap<OsString, Symbol>
-    source_identifier: OsString,
+    id: OsString,
 }
 
 impl FileSystemLibrary {
-    pub fn new(path: OsString, source_identifier: OsString) -> Result<Self, Error> {
+    pub fn new(path: OsString, id: OsString) -> Result<Self, Error> {
         let lib = Self::build(&path)?;
 
         Ok(Self {
             lib,
             path,
-            source_identifier,
+            id,
         })
     }
 
@@ -30,16 +30,26 @@ impl FileSystemLibrary {
         unsafe { Ok(Library::new(path)?) }
     }
 
-    pub fn find<T>(&self, symbol: &OsStr) -> Result<Symbol<T>, Error> {
+    pub fn find<T>(&self, path: &OsStr) -> Result<Symbol<T>, Error> {
+        let symbol: Symbol<T>;
+        let path = path.as_bytes();
+
         unsafe {
-            return Ok(self.lib.get(symbol.as_bytes())?);
+            symbol = self.lib.get(path)?
         }
+
+        return  Ok(symbol);
     }
 }
 
 impl ILibrary for FileSystemLibrary {
     fn id(&self) -> &OsStr {
-        &self.source_identifier
+        &self.id
+    }
+
+    fn find<T>(&self, path: &OsStr) -> Result<Box<dyn std::any::Any>, Error>
+    where Self: Sized {
+        todo!()
     }
 }
 

@@ -32,4 +32,8 @@ fn main() {
 
     errors.iter().for_each(|e| println!("error: {:?}", &e));
     files.iter().for_each(|f| println!("success: {}", &f));
+
+    files.iter().for_each(|f| {
+        
+    });
 }
