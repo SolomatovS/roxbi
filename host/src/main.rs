@@ -5,6 +5,8 @@ use lib::ILibrarySource;
 use std::error::Error;
 use std::path::PathBuf;
 
+use isay_hello::ISayHelloService;
+
 fn main() {
     let filter = |path: &PathBuf| {
         if let Some(extension) = path.extension() {
@@ -34,6 +36,6 @@ fn main() {
     files.iter().for_each(|f| println!("success: {}", &f));
 
     files.iter().for_each(|f| {
-        
+        //let sym = f.find::<extern "Rust" fn() -> Box<dyn ISayHelloService>>(b"new");
     });
 }

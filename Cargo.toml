@@ -1,10 +1,13 @@
 [workspace]
 members = [
-    "host",
-    "my_debug",
-    "iter_help",
+    # "host",
+    # "my_debug",
+    # "iter_help",
     "lib",
-    "fslib",
-    "isay_hello",
-    "say_hello_console"
+    # "fslib",
+    # "isay_hello",
+    # "say_hello_console",
+    "dymod",
+    # "test_dymod",
+    "subcrate",
 ]

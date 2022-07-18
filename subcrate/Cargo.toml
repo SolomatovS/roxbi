@@ -1,0 +1,10 @@
+[package]
+name = "subcrate"
+version = "0.1.0"
+authors = ["Solomatov Sergei <solomatovs@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["dylib"] 
+
+[dependencies]

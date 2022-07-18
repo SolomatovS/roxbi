@@ -5,6 +5,7 @@ use std::os::unix::ffi::OsStrExt;
 
 use lib::ILibrary;
 use libloading::{Library, Symbol};
+use std::any::Any;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -30,6 +31,7 @@ impl FileSystemLibrary {
         unsafe { Ok(Library::new(path)?) }
     }
 
+    /*
     pub fn find<T>(&self, path: &OsStr) -> Result<Symbol<T>, Error> {
         let symbol: Symbol<T>;
         let path = path.as_bytes();
@@ -38,20 +40,30 @@ impl FileSystemLibrary {
             symbol = self.lib.get(path)?
         }
 
-        return  Ok(symbol);
+        Ok(symbol)
     }
+*/
 }
-
+/*
 impl ILibrary for FileSystemLibrary {
     fn id(&self) -> &OsStr {
         &self.id
     }
 
-    fn find<T>(&self, path: &OsStr) -> Result<Box<dyn std::any::Any>, Error>
-    where Self: Sized {
-        todo!()
+    fn find<'a, T: 'a>(&'a self, path: &OsStr) -> Result<Box<dyn Any + 'a>, Error>
+    {
+        let symbol: Symbol<T>;
+        let path = path.as_bytes();
+        unsafe {
+            symbol = self.lib.get(path)?
+        }
+
+        let symbol = Box::new(symbol);
+
+        Ok(symbol)
     }
 }
+*/
 
 impl Display for FileSystemLibrary {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

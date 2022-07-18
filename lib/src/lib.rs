@@ -1,32 +1,13 @@
 use std::ffi::OsStr;
 use std::any::Any;
-use std::fmt::{Display};
 
 type Error = Box<dyn std::error::Error>;
 
 pub trait ILibrary {
     fn id(&self) -> &OsStr;
-    /// .
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// // Example template not implemented for trait functions
-    /// ```
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if .
-    fn find<T>(&self, path: &OsStr) -> Result<Box<dyn Any>, Error>
-    where Self: Sized;
+    fn find<'a>(&'a self, path: &OsStr) -> Result<Box<dyn Any + 'a>, Error>;
 }
 
-impl Display for dyn ILibrary {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:p} ({:?})", &self, self.id())
-    }
-}
-/*
 impl PartialEq for dyn ILibrary + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
@@ -40,8 +21,8 @@ impl std::fmt::Display for dyn ILibrary {
         write!(f, "{:?}", self.id())
     }
 }
-*/
-pub trait ILibrarySource {
+
+pub trait ILibrarySource where Self: Sized {
     fn generate(&self) -> (Vec<Box<dyn ILibrary>>, Vec<Error>);
 }
 

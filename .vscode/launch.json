@@ -11,17 +11,17 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=host",
-                    "--package=host"
+                    "--bin=test_dymod",
+                    "--package=test_dymod"
                 ],
                 "filter": {
-                    "name": "host",
+                    "name": "test_dymod",
                     "kind": "bin"
                 }
             },
             "program": "${cargo:program}",
             "args": [],
-            "cwd": "${workspaceFolder}/host"
+            "cwd": "${workspaceFolder}/test_dymod"
         }
     ]
 }
