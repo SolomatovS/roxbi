@@ -8,6 +8,6 @@ members = [
     # "isay_hello",
     # "say_hello_console",
     "dymod",
-    # "test_dymod",
+    "test_dymod",
     "subcrate",
 ]

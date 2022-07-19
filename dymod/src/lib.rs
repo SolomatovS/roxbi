@@ -56,51 +56,33 @@ macro_rules! dymod {
             static mut DYLIB: Option<Library> = None;
             static mut MODIFIED_TIME: Option<std::time::SystemTime> = None;
 
-            static mut DYLIB_PATH: Option<&str> = None;
-            // const DYLIB_PATH: &'static str = path;
-            // static DYLIB_PATH: &'str = "/Users/solomatovs/Documents/GitHub/roxbi/target/debug/libsubcrate.dylib";
+            #[cfg(target_os = "macos")]
+            const DYLIB_PATH: &'static str = $libpath;
 
-            pub fn set_lib(lib_path: &'static str) {
-                DYLIB_PATH = Some(lib_path);
-            }
+            pub fn reload() {
+                let path = unsafe {
+                    let delete_old = DYLIB.is_some();
 
-            pub enum DymodError {
-                IOError(std::io::Error)
-            }
+                    // Drop the old
+                    DYLIB = None;
 
-            impl From<std::io::Error> for DymodError {
-                fn from(err: std::io::Error) -> DymodError {
-                    DymodError::Parse(err)
-                }
-            }
-
-            pub fn reload() -> Result<(), DymodError>  {
-                //let path = unsafe {
-                    match DYLIB_PATH {
-                        Some(lib_path) => {
-                            // Clean up the old
-                            if DYLIB.is_some() {
-                                let old_path = format!("{}{}", lib_path, VERSION - 1);
-                                match std::fs::remove_file(&old_path) {
-                                    Err(e) => return Err(DymodError::IOError(e)),
-                                }
-                            }
-
-                            // Create the new
-                            let new_path = format!("{}{}", lib_path, VERSION);
-                            std::fs::copy(lib, &new_path).expect("Failed to copy new dylib");
-
-                            // Load new version
-                            unsafe {
-                                let lib = Library::new(&new_path);
-                                
-                                DYLIB = Some(lib?)
-                            }
-
-                            VERSION += 1;
-                        }
+                    // Clean up the old
+                    if delete_old {
+                        let old_path = format!("{}{}", DYLIB_PATH, VERSION - 1);
+                        std::fs::remove_file(&old_path).expect("Failed to delete old dylib");
                     }
-                //};
+
+                    // Create the new
+                    let new_path = format!("{}{}", DYLIB_PATH, VERSION);
+                    std::fs::copy(DYLIB_PATH, &new_path).expect("Failed to copy new dylib");
+                    new_path
+                };
+                
+                // Load new version
+                unsafe {
+                    VERSION += 1;
+                    DYLIB = Some(Library::new(&path).expect("Failed to load dylib"))
+                }
             }
 
             fn dymod_file_changed() -> bool {
@@ -129,14 +111,11 @@ macro_rules! dymod {
             $(
             pub fn $fnname($($argname: $argtype),*) $(-> $returntype)? {
                 let lib = dymod_get_lib();
-                let stringify_func = stringify!($fnname);
-                let bytes_name = stringify_func.as_bytes();
-
-                let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = unsafe {
-                    lib.get(bytes_name).expect("Failed to get symbol from dylib")
-                };
-
-                symbol($($argname),*)
+                unsafe {
+                    let symbol: Symbol<extern "C" fn($($argtype),*) $(-> $returntype)?> =
+                        lib.get(stringify!($fnname).as_bytes()).expect("Failed to get symbol from dylib");
+                    symbol($($argname),*)
+                }
             }
             )*
         }
