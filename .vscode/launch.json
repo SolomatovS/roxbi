@@ -7,7 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "dymod",
+            "name": "test_dymod",
             "cargo": {
                 "args": [
                     "build",

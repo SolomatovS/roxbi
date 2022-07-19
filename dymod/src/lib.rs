@@ -57,7 +57,11 @@ macro_rules! dymod {
             static mut MODIFIED_TIME: Option<std::time::SystemTime> = None;
 
             #[cfg(target_os = "macos")]
-            const DYLIB_PATH: &'static str = $libpath;
+            const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".dylib");
+            #[cfg(all(unix, not(target_os = "macos")))]
+            const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".so");
+            #[cfg(windows)]
+            const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".dll");
 
             pub fn reload() {
                 let path = unsafe {
