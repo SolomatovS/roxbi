@@ -8,7 +8,7 @@ compile_error!("The force-dynamic feature is not supported on WASM targets.");
     all(not(feature = "force-static"), debug_assertions)
 ))]
 #[doc(hidden)]
-pub use libloading::{Library, Symbol};
+pub use libloading::{Library, Symbol, Error};
 
 #[cfg(any(
     feature = "force-dynamic",
@@ -48,8 +48,19 @@ macro_rules! dymod {
     ) => {
         pub mod $modname {
             use super::*;
+            use std::fs;
+            use std::result::Result;
+            use std::error::Error;
+            use std::path::Path;
+
+            use std::{thread, time, io};
 
             use $crate::{Library, Symbol};
+
+            #[derive(Debug)]
+            pub enum DymodError {
+                LibloadingNotFound($crate::Error),
+            }
 
             static mut VERSION: usize = 0;
 
@@ -63,30 +74,35 @@ macro_rules! dymod {
             #[cfg(windows)]
             const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".dll");
 
-            pub fn reload() {
-                let path = unsafe {
-                    let delete_old = DYLIB.is_some();
+            pub fn reload() -> Result<(), DymodError> {
+              let path = unsafe {
+                DYLIB = None;
 
-                    // Drop the old
-                    DYLIB = None;
+                let new_path = format!("{}_{}", DYLIB_PATH, VERSION);
+                let new_path_ = Path::new(&new_path);
+                let sleep = time::Duration::from_secs(1000);
 
-                    // Clean up the old
-                    if delete_old {
-                        let old_path = format!("{}{}", DYLIB_PATH, VERSION - 1);
-                        std::fs::remove_file(&old_path).expect("Failed to delete old dylib");
-                    }
-
-                    // Create the new
-                    let new_path = format!("{}{}", DYLIB_PATH, VERSION);
-                    std::fs::copy(DYLIB_PATH, &new_path).expect("Failed to copy new dylib");
-                    new_path
-                };
-                
-                // Load new version
-                unsafe {
-                    VERSION += 1;
-                    DYLIB = Some(Library::new(&path).expect("Failed to load dylib"))
+                while new_path_.exists() {
+                  if let Err(e) = fs::remove_file(new_path_) {
+                    println!("file {} not removed. error: {}", new_path, e);
+                    thread::sleep(sleep);
+                  }
                 }
+                
+                std::fs::copy(DYLIB_PATH, &new_path).expect("Failed to copy new dylib");
+                new_path
+              };
+              
+              unsafe {
+                VERSION += 1;
+                match Library::new(&path) {
+                  Ok(lib) => {
+                    DYLIB = Some(lib);
+                    Ok(())
+                  },
+                  Err(e) => Err(DymodError::LibloadingNotFound(e)),
+                }
+              }
             }
 
             fn dymod_file_changed() -> bool {
@@ -106,9 +122,10 @@ macro_rules! dymod {
             fn dymod_get_lib() -> &'static Library {
                 unsafe {
                     if DYLIB.is_none() || dymod_file_changed() {
-                        reload();
+                        reload()?;
                     }
-                    DYLIB.as_ref().unwrap()
+
+                    DYLIB.as_ref()
                 }
             }
 
@@ -116,7 +133,7 @@ macro_rules! dymod {
             pub fn $fnname($($argname: $argtype),*) $(-> $returntype)? {
                 let lib = dymod_get_lib();
                 unsafe {
-                    let symbol: Symbol<extern "C" fn($($argtype),*) $(-> $returntype)?> =
+                    let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> =
                         lib.get(stringify!($fnname).as_bytes()).expect("Failed to get symbol from dylib");
                     symbol($($argname),*)
                 }
