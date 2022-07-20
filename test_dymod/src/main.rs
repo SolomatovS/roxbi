@@ -9,7 +9,7 @@ dymod! {
 
 fn main() {
     loop {
-        let message = subcrate::count_sheep();
+        let message = subcrate::count_sheep().unwrap();
         println!("There are '{}' sheep.", message);
         std::thread::sleep(std::time::Duration::from_millis(2000));
     }

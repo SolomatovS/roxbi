@@ -62,6 +62,8 @@ macro_rules! dymod {
                 LibloadingNotFound($crate::Error),
                 NoneError,
                 SymbolNotFound($crate::Error),
+                LibraryCopyError(io::Error),
+                RemoveOldLibraryError(io::Error),
             }
 
             static mut VERSION: usize = 0;
@@ -69,34 +71,33 @@ macro_rules! dymod {
             static mut DYLIB: Option<Library> = None;
             static mut MODIFIED_TIME: Option<std::time::SystemTime> = None;
 
-            #[cfg(target_os = "macos")]
-            const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".dylib");
-            #[cfg(all(unix, not(target_os = "macos")))]
-            const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".so");
-            #[cfg(windows)]
-            const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".dll");
-
+            const DYLIB_PATH: &'static str = stringify!($libpath);
+            
             pub fn reload() -> Result<Library, DymodError> {
               let path = unsafe {
                 DYLIB = None;
 
-                let new_path = format!("{}_{}", DYLIB_PATH, VERSION);
+                let new_path = format!("{}{}", DYLIB_PATH.trim_matches('"'), VERSION);
                 let new_path_ = Path::new(&new_path);
-                let sleep = time::Duration::from_secs(1000);
 
-                while new_path_.exists() {
+                if new_path_.exists() {
                   if let Err(e) = fs::remove_file(new_path_) {
-                    println!("file {} not removed. error: {}", new_path, e);
-                    thread::sleep(sleep);
+                    return Err(DymodError::RemoveOldLibraryError(e))
                   }
                 }
                 
-                std::fs::copy(DYLIB_PATH, &new_path).expect("Failed to copy new dylib");
+                println!("{} -> {}", DYLIB_PATH.trim_matches('"'), &new_path);
+                if let Err(e) = std::fs::copy(DYLIB_PATH.trim_matches('"'), &new_path) {
+                  println!("{}", e);
+                  return Err(DymodError::LibraryCopyError(e))
+                }
+                
                 new_path
               };
               
               unsafe {
                 VERSION += 1;
+
                 match Library::new(&path) {
                   Ok(lib) => Ok(lib),
                   Err(e) => Err(DymodError::LibloadingNotFound(e)),
@@ -119,26 +120,29 @@ macro_rules! dymod {
             }
 
             fn get_lib() -> Result<&'static Library, DymodError> {
-              if DYLIB.is_none() || (DYLIB.is_some() && dymod_file_changed()) {
-                DYLIB = Some(reload()?);
-              }
+              unsafe {
+                if DYLIB.is_none() || (DYLIB.is_some() && dymod_file_changed()) {
+                  DYLIB = Some(reload()?);
+                }
 
-              match &DYLIB {
-                None => return Err(DymodError::NoneError),
-                Some(lib) => Ok(lib),
+                match &DYLIB {
+                  None => return Err(DymodError::NoneError),
+                  Some(lib) => Ok(lib),
+                }
               }
             }
 
             $(
-            pub fn $fnname($($argname: $argtype),*) -> Result<$( $returntype)?, DymodError> {
+            pub fn $fnname($($argname: $argtype),*) -> Result<$($returntype)?, DymodError> {
               let lib = get_lib()?;
-
+              unsafe {
                 let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match lib.get(stringify!($fnname).as_bytes()) {
                   Ok(sym) => sym,
                   Err(e) => return Err(DymodError::SymbolNotFound(e)),
                 };
                 
                 Ok(symbol($($argname),*))
+              }
             }
             )*
         }
