@@ -41,10 +41,10 @@ macro_rules! dymod {
 #[macro_export]
 macro_rules! dymod {
     (
-        #[path = $libpath: tt]
-        pub mod $modname: ident {
-            $(fn $fnname: ident ( $($argname: ident : $argtype: ty),* $(,)? ) $(-> $returntype: ty)? ;)*
-        }
+      #[path = $libpath: tt]
+      pub mod $modname: ident {
+        $(fn $fnname: ident ( $($argname: ident : $argtype: ty),* $(,)? ) $(-> $returntype: ty)? ;)*
+      }
     ) => {
         pub mod $modname {
             use super::*;
@@ -60,6 +60,8 @@ macro_rules! dymod {
             #[derive(Debug)]
             pub enum DymodError {
                 LibloadingNotFound($crate::Error),
+                NoneError,
+                SymbolNotFound($crate::Error),
             }
 
             static mut VERSION: usize = 0;
@@ -74,7 +76,7 @@ macro_rules! dymod {
             #[cfg(windows)]
             const DYLIB_PATH: &'static str = concat!(stringify!($libpath), ".dll");
 
-            pub fn reload() -> Result<(), DymodError> {
+            pub fn reload() -> Result<Library, DymodError> {
               let path = unsafe {
                 DYLIB = None;
 
@@ -96,10 +98,7 @@ macro_rules! dymod {
               unsafe {
                 VERSION += 1;
                 match Library::new(&path) {
-                  Ok(lib) => {
-                    DYLIB = Some(lib);
-                    Ok(())
-                  },
+                  Ok(lib) => Ok(lib),
                   Err(e) => Err(DymodError::LibloadingNotFound(e)),
                 }
               }
@@ -119,24 +118,27 @@ macro_rules! dymod {
                 $crate::AUTO_RELOAD && file_changed().unwrap_or(false)
             }
 
-            fn dymod_get_lib() -> &'static Library {
-                unsafe {
-                    if DYLIB.is_none() || dymod_file_changed() {
-                        reload()?;
-                    }
+            fn get_lib() -> Result<&'static Library, DymodError> {
+              if DYLIB.is_none() || (DYLIB.is_some() && dymod_file_changed()) {
+                DYLIB = Some(reload()?);
+              }
 
-                    DYLIB.as_ref()
-                }
+              match &DYLIB {
+                None => return Err(DymodError::NoneError),
+                Some(lib) => Ok(lib),
+              }
             }
 
             $(
-            pub fn $fnname($($argname: $argtype),*) $(-> $returntype)? {
-                let lib = dymod_get_lib();
-                unsafe {
-                    let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> =
-                        lib.get(stringify!($fnname).as_bytes()).expect("Failed to get symbol from dylib");
-                    symbol($($argname),*)
-                }
+            pub fn $fnname($($argname: $argtype),*) -> Result<$( $returntype)?, DymodError> {
+              let lib = get_lib()?;
+
+                let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match lib.get(stringify!($fnname).as_bytes()) {
+                  Ok(sym) => sym,
+                  Err(e) => return Err(DymodError::SymbolNotFound(e)),
+                };
+                
+                Ok(symbol($($argname),*))
             }
             )*
         }
