@@ -3,14 +3,17 @@ use std::process::exit;
 use dymod::dymod;
 
 dymod! {
-  #[struct = Subcrate]
   pub mod subcrate {
-    fn count_sheep() -> u8;
+    pub struct Subcrate {
+      fn count_sheep() -> u8;
+    }
   }
 }
 
 fn main() {
-  let sub = match subcrate::load("/Users/solomatovs/Documents/GitHub/roxbi/target/debug/libsubcrate.dylib") {
+  pub use subcrate::Subcrate;
+
+  let sub = match Subcrate::load("/Users/solomatovs/Documents/GitHub/roxbi/target/debug/libsubcrate.dylib") {
     Ok(sub) => sub,
     Err(e) => {
       println!("error load library: {}", &e);

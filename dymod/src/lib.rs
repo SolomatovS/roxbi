@@ -127,9 +127,13 @@ impl DymodSource{
 #[macro_export]
 macro_rules! dymod {
     (
-      #[struct = $struct_name: ident]
+      // #[struct = $struct_name: ident]
       pub mod $modname: ident {
-        $(fn $fnname: ident ( $($argname: ident : $argtype: ty),* $(,)? ) $(-> $returntype: ty)? ;)*
+        $(
+          pub struct $struct_name: ident {
+            $(fn $fnname: ident ( $($argname: ident : $argtype: ty),* $(,)? ) $(-> $returntype: ty)? ;)*
+          }
+        )*
       }
     ) => {
         pub mod $modname {
@@ -140,51 +144,53 @@ macro_rules! dymod {
 
             use std::sync::RwLock;
 
-            pub struct $struct_name {
-              dy: RwLock<DymodSource>
-            }
-
-            impl $struct_name {
-              $(
-                pub fn $fnname(&self, $($argname: $argtype),*) -> Result<$($returntype)?, DymodError> {
-                  let bor = loop {
-                    let bor = self.dy.read().unwrap();
+            $(
+              pub struct $struct_name {
+                dy: RwLock<DymodSource>
+              }
   
-                    if !bor.reload_needed() {
-                      break bor;
-                    }
-                    
-                    let mut dy = self.dy.write().unwrap();
-                    *dy = dy.create_new_version()?;
+              impl $struct_name {
+                $(
+                  pub fn $fnname(&self, $($argname: $argtype),*) -> Result<$($returntype)?, DymodError> {
+                    let bor = loop {
+                      let bor = self.dy.read().unwrap();
+    
+                      if !bor.reload_needed() {
+                        break bor;
+                      }
+                      
+                      let mut dy = self.dy.write().unwrap();
+                      *dy = dy.create_new_version()?;
+                    };
+  
+                    let lib = bor.get_lib_ref()?;
+                      let symbol = unsafe {
+                        lib.get(stringify!($fnname).as_bytes())
+                      };
+  
+                      let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
+                        Ok(sym) => sym,
+                        Err(e) => return Err(DymodError::SymbolNotFound(e)),
+                      };
+                      
+                      Ok(symbol($($argname),*))
+                  }
+                )*
+                
+                pub fn load(file_path: &str) -> Result<$struct_name, DymodError> {
+                  let dy = match DymodSource::new(&file_path, 1) {
+                    Ok(dy) => dy,
+                    Err(e) => return Err(e),
                   };
-
-                  let lib = bor.get_lib_ref()?;
-                    let symbol = unsafe {
-                      lib.get(stringify!($fnname).as_bytes())
-                    };
-
-                    let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
-                      Ok(sym) => sym,
-                      Err(e) => return Err(DymodError::SymbolNotFound(e)),
-                    };
-                    
-                    Ok(symbol($($argname),*))
+    
+                  let sdf = $struct_name {
+                    dy: RwLock::new(dy),
+                  };
+    
+                  Ok(sdf)
                 }
-              )*
-            }
-
-            pub fn load(file_path: &str) -> Result<$struct_name, DymodError> {
-              let dy = match DymodSource::new(&file_path, 1) {
-                Ok(dy) => dy,
-                Err(e) => return Err(e),
-              };
-
-              let sdf = $struct_name {
-                dy: RwLock::new(dy),
-              };
-
-              Ok(sdf)
-            }
+              }
+            )*
         }
     }
 }
