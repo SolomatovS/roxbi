@@ -9,13 +9,9 @@ pub struct TestTestovich {
 }
 
 
-// #[no_mangle]
-// pub extern "Rust" fn new() -> TestTestovich {
-//   let sdf = TestTestovich {
-//     ert: 222222,
-//   };
-
-
-
-//   sdf
-// }
+#[no_mangle]
+pub extern "Rust" fn new() -> TestTestovich {
+  TestTestovich {
+    ert: 222222,
+  }
+}

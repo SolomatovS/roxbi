@@ -16,7 +16,7 @@ impl fmt::Display for TestTestovich {
 dymod! {
   pub mod subcrate {
     pub struct Subcrate {
-      fn new() -> u8;
+      fn new() -> TestTestovich;
       fn count_sheep() -> u8;
     }
   }

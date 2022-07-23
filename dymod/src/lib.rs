@@ -165,7 +165,7 @@ macro_rules! dymod {
 
         impl $struct_name {
           $(
-            pub fn $fnname(&self, $($argname: $argtype),*) -> Result<$($returntype)?, DymodError> {
+            pub fn $fnname(&self, $($argname: $argtype),*) -> Result<($($returntype)?), DymodError> {
               let bor = loop {
                 {
                   let bor = self.dy.read().unwrap();
@@ -187,7 +187,7 @@ macro_rules! dymod {
                 let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
                   Ok(sym) => sym,
                   Err(e) => {
-                    let symbol_signature = concat!("fn ", stringify!($fnname), "(", stringify!($($argtype)*), ") ", stringify!($(-> $returntype)*));
+                    let symbol_signature = concat!("fn ", stringify!($fnname), "(", stringify!($($argtype)*), ")", stringify!( $(-> $returntype)*));
                     return Err(DymodError::SymbolNotFound(String::from(symbol_signature), e))
                   },
                 };
