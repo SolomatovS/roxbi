@@ -1,150 +1,190 @@
-#![allow(clippy::needless_doctest_main)]
 
-#[cfg(all(target_arch = "wasm32", feature = "force-dynamic"))]
-compile_error!("The force-dynamic feature is not supported on WASM targets.");
+use std::fmt; 
+use std::io;
+use std::path::Path;
+use std::time::SystemTime;
 
-#[cfg(any(
-    feature = "force-dynamic",
-    all(not(feature = "force-static"), debug_assertions)
-))]
-#[doc(hidden)]
 pub use libloading::{Library, Symbol, Error};
 
-#[cfg(any(
-    feature = "force-dynamic",
-    all(not(feature = "force-static"), debug_assertions)
-))]
-#[doc(hidden)]
-pub const AUTO_RELOAD: bool = cfg!(feature = "auto-reload");
 
-#[cfg(any(
-    feature = "force-static",
-    all(not(feature = "force-dynamic"), not(debug_assertions))
-))]
-#[macro_export]
-macro_rules! dymod {
-    (
-        #[path = $libpath: tt]
-        pub mod $modname: ident {
-            $(fn $fnname: ident ( $($argname: ident : $argtype: ty),* $(,)? ) $(-> $returntype: ty)? ;)*
-        }
-    ) => {
-        #[path = $libpath]
-        pub mod $modname;
-    }
+#[derive(Debug)]
+pub enum DymodError {
+  IOError(io::Error),
+  LibloadingError(Error),
+  DymodNonInitialized,
+  SymbolNotFound(Error),
 }
 
-#[cfg(any(
-    feature = "force-dynamic",
-    all(not(feature = "force-static"), debug_assertions)
-))]
+impl fmt::Display for DymodError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.to_string())
+  }
+}
+
+#[derive(Debug)]
+pub struct DymodSource {
+  version: usize,
+  modified_time: std::time::SystemTime,
+  source_path: String,
+  lib_path: String,
+  lib: Library,
+  manual_reload_needed: bool,
+}
+
+
+fn get_modified_date(file_path: &str) -> Result<SystemTime, DymodError> {
+  let metadata = match std::fs::metadata(&file_path) {
+    Err(e) => return Err(DymodError::IOError(e)),
+    Ok(metadata) => metadata,
+  };
+
+  let modified_time = match metadata.modified() {
+    Err(e) => return Err(DymodError::IOError(e)),
+    Ok(x) => x,
+  };
+
+  Ok(modified_time)
+}
+
+fn get_new_file_name(file_path: &str, new_version: usize) -> String {
+  format!("{}_load_{}", file_path, new_version)
+}
+
+impl DymodSource{
+  pub fn reload_needed(&self) -> bool {
+    // if manual reload turn on
+    if self.manual_reload_needed {
+      return true;
+    }
+
+    // if modified time changed
+    match get_modified_date(&&self.source_path) {
+      Ok(modified_time) => (modified_time != self.modified_time),
+      Err(_) => true,
+    }
+  }
+
+  pub fn version(&self) -> usize {
+    self.version
+  }
+
+  pub fn source_file(&self) -> &str {
+    &self.source_path
+  }
+
+  pub fn dest_file(&self) -> &str {
+    &self.lib_path
+  }
+
+  pub fn create_new_version(&self) -> Result<DymodSource, DymodError> {
+    let new_lib = DymodSource::new(&self.source_path,  self.version+1)?;
+
+    Ok(new_lib)
+  }
+
+  pub fn get_lib_ref(&self) -> Result<&Library, DymodError> {
+    return Ok(&self.lib)
+  }
+
+  pub fn reload_turn_on(&mut self) {
+    self.manual_reload_needed = true
+  }
+
+  pub fn new(file_path: &str, version: usize) -> Result<Self, DymodError> {
+    let mut new_version: usize = version;
+
+    let copy_to = loop {
+      let path = get_new_file_name(file_path, new_version);
+
+      if !Path::new(&path).exists() {
+        break path;
+      }
+
+      new_version = new_version + 1;
+    };
+    
+    if let Err(e) = std::fs::copy(&file_path, &copy_to) {
+      return Err(DymodError::IOError(e))
+    }
+
+    match unsafe {Library::new(&copy_to)} {
+      Ok(lib) => {
+        Ok(DymodSource {
+          modified_time: get_modified_date(&file_path)?,
+          version: new_version,
+          source_path: String::from(file_path),
+          lib_path: String::from(copy_to),
+          lib,
+          manual_reload_needed: false,
+        })
+      },
+      Err(e) => Err(DymodError::LibloadingError(e)),
+    }
+  }
+}
+
+
 #[macro_export]
 macro_rules! dymod {
     (
-      #[path = $libpath: tt]
+      #[struct = $struct_name: ident]
       pub mod $modname: ident {
         $(fn $fnname: ident ( $($argname: ident : $argtype: ty),* $(,)? ) $(-> $returntype: ty)? ;)*
       }
     ) => {
         pub mod $modname {
             use super::*;
-            use std::fs;
-            use std::result::Result;
-            use std::error::Error;
-            use std::path::Path;
-
-            use std::{thread, time, io};
 
             use $crate::{Library, Symbol};
+            use $crate::{DymodError, DymodSource};
 
-            #[derive(Debug)]
-            pub enum DymodError {
-                LibloadingNotFound($crate::Error),
-                NoneError,
-                SymbolNotFound($crate::Error),
-                LibraryCopyError(io::Error),
-                RemoveOldLibraryError(io::Error),
+            use std::sync::RwLock;
+
+            pub struct $struct_name {
+              dy: RwLock<DymodSource>
             }
 
-            static mut VERSION: usize = 0;
-
-            static mut DYLIB: Option<Library> = None;
-            static mut MODIFIED_TIME: Option<std::time::SystemTime> = None;
-
-            const DYLIB_PATH: &'static str = stringify!($libpath);
-            
-            pub fn reload() -> Result<Library, DymodError> {
-              let path = unsafe {
-                DYLIB = None;
-
-                let new_path = format!("{}{}", DYLIB_PATH.trim_matches('"'), VERSION);
-                let new_path_ = Path::new(&new_path);
-
-                if new_path_.exists() {
-                  if let Err(e) = fs::remove_file(new_path_) {
-                    return Err(DymodError::RemoveOldLibraryError(e))
-                  }
-                }
-                
-                println!("{} -> {}", DYLIB_PATH.trim_matches('"'), &new_path);
-                if let Err(e) = std::fs::copy(DYLIB_PATH.trim_matches('"'), &new_path) {
-                  println!("{}", e);
-                  return Err(DymodError::LibraryCopyError(e))
-                }
-                
-                new_path
-              };
-              
-              unsafe {
-                VERSION += 1;
-
-                match Library::new(&path) {
-                  Ok(lib) => Ok(lib),
-                  Err(e) => Err(DymodError::LibloadingNotFound(e)),
-                }
-              }
-            }
-
-            fn dymod_file_changed() -> bool {
-                fn file_changed() -> Result<bool, std::io::Error> {
-                    let metadata = std::fs::metadata(&DYLIB_PATH)?;
-                    let modified_time = metadata.modified()?;
-                    unsafe {
-                        let changed = MODIFIED_TIME.is_some() && MODIFIED_TIME != Some(modified_time);
-                        MODIFIED_TIME = Some(modified_time);
-                        Ok(changed)
+            impl $struct_name {
+              $(
+                pub fn $fnname(&self, $($argname: $argtype),*) -> Result<$($returntype)?, DymodError> {
+                  let bor = loop {
+                    let bor = self.dy.read().unwrap();
+  
+                    if !bor.reload_needed() {
+                      break bor;
                     }
-                }
+                    
+                    let mut dy = self.dy.write().unwrap();
+                    *dy = dy.create_new_version()?;
+                  };
 
-                $crate::AUTO_RELOAD && file_changed().unwrap_or(false)
+                  let lib = bor.get_lib_ref()?;
+                    let symbol = unsafe {
+                      lib.get(stringify!($fnname).as_bytes())
+                    };
+
+                    let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
+                      Ok(sym) => sym,
+                      Err(e) => return Err(DymodError::SymbolNotFound(e)),
+                    };
+                    
+                    Ok(symbol($($argname),*))
+                }
+              )*
             }
 
-            fn get_lib() -> Result<&'static Library, DymodError> {
-              unsafe {
-                if DYLIB.is_none() || (DYLIB.is_some() && dymod_file_changed()) {
-                  DYLIB = Some(reload()?);
-                }
+            pub fn load(file_path: &str) -> Result<$struct_name, DymodError> {
+              let dy = match DymodSource::new(&file_path, 1) {
+                Ok(dy) => dy,
+                Err(e) => return Err(e),
+              };
 
-                match &DYLIB {
-                  None => return Err(DymodError::NoneError),
-                  Some(lib) => Ok(lib),
-                }
-              }
-            }
+              let sdf = $struct_name {
+                dy: RwLock::new(dy),
+              };
 
-            $(
-            pub fn $fnname($($argname: $argtype),*) -> Result<$($returntype)?, DymodError> {
-              let lib = get_lib()?;
-              unsafe {
-                let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match lib.get(stringify!($fnname).as_bytes()) {
-                  Ok(sym) => sym,
-                  Err(e) => return Err(DymodError::SymbolNotFound(e)),
-                };
-                
-                Ok(symbol($($argname),*))
-              }
+              Ok(sdf)
             }
-            )*
         }
     }
 }
