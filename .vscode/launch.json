@@ -7,21 +7,21 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "test_dymod",
+            "name": "engine",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=test_dymod",
-                    "--package=test_dymod"
+                    "--bin=engine",
+                    "--package=engine"
                 ],
                 "filter": {
-                    "name": "test_dymod",
+                    "name": "engine",
                     "kind": "bin"
                 }
             },
             "program": "${cargo:program}",
             "args": [],
-            "cwd": "${workspaceFolder}/test_dymod"
+            "cwd": "${workspaceFolder}/engine"
         }
     ]
 }

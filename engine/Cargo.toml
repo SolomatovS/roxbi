@@ -1,0 +1,10 @@
+[package]
+name = "engine"
+version = "0.1.0"
+authors = ["Solomatov Sergei <solomatovs@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+dymod = { path = "../dymod", version = "*" }
+models = { path = "../models", version = "*" }
+rand = "0.8"
