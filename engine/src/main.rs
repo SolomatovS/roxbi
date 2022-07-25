@@ -1,11 +1,11 @@
 use std::process::exit;
 use dymod::dymod;
-use models::DataFrame;
+// use models::DataFrame;
 
 dymod! {
   pub mod transform {
     pub struct Extractor {
-      fn to() -> DataFrame;
+      fn to() -> u32;
     }
   }
 }

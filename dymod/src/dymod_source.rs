@@ -10,6 +10,7 @@ pub enum DymodError {
   LibloadingError(Error),
   DymodNonInitialized,
   SymbolNotFound(Error, String),
+  PoisonError,
 }
 
 impl fmt::Display for DymodError {

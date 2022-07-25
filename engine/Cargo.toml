@@ -7,4 +7,5 @@ edition = "2018"
 [dependencies]
 dymod = { path = "../dymod", version = "*" }
 models = { path = "../models", version = "*" }
+iter_help = { path = "../iter_help", version = "*" }
 rand = "0.8"

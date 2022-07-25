@@ -25,33 +25,48 @@ macro_rules! dymod {
         impl $struct_name {
           $(
             pub fn $fnname(&self, $($argname: $argtype),*) -> Result<($($returntype)?), DymodError> {
-              let bor = loop {
+              let mut reload: bool = false;
+              loop {
                 {
-                  let bor = self.dy.read().unwrap();
-
-                  if !bor.reload_needed() {
-                    break bor;
+                  match self.dy.read() {
+                    Ok(bor) => {
+                      if !bor.reload_needed() {
+                        let lib = bor.get_lib_ref()?;
+                        let symbol = unsafe {
+                          lib.get(stringify!($fnname).as_bytes())
+                        };
+          
+                        let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
+                          Ok(sym) => sym,
+                          Err(e) => {
+                            let symbol_signature = concat!("fn ", stringify!($fnname), "(", stringify!($($argtype)*), ")", stringify!($(-> $returntype)*));
+                            return Err(DymodError::SymbolNotFound(e, String::from(symbol_signature)))
+                          },
+                        };
+                        
+                        return Ok(symbol($($argname),*))
+                      } else {
+                        reload = true;
+                      }
+                    },
+                    Err(e) => {
+                      return Err(DymodError::PoisonError);
+                    }
                   }
                 }
                 
-                let mut dy = self.dy.write().unwrap();
-                *dy = dy.create_new_version()?;
+                // reload lib if needed
+                if reload {
+                  match self.dy.write() {
+                    Ok(mut dy) => {
+                      *dy = dy.create_new_version()?;
+                    },
+                    Err(e) => {
+                      return Err(DymodError::PoisonError);
+                    }
+                  }
+                }
               };
-
-              let lib = bor.get_lib_ref()?;
-                let symbol = unsafe {
-                  lib.get(stringify!($fnname).as_bytes())
-                };
-
-                let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
-                  Ok(sym) => sym,
-                  Err(e) => {
-                    let symbol_signature = concat!("fn ", stringify!($fnname), "(", stringify!($($argtype)*), ")", stringify!($(-> $returntype)*));
-                    return Err(DymodError::SymbolNotFound(e, String::from(symbol_signature)))
-                  },
-                };
-                
-                Ok(symbol($($argname),*))
             }
           )*
           

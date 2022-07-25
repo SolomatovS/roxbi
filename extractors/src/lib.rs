@@ -10,7 +10,7 @@ pub extern "Rust" fn from(data: &DataFrame) -> DataFrame {
 
 #[no_mangle]
 pub extern "Rust" fn to() -> DataFrame {
-  println!("to");
+  println!("я поменял текст");
 
   DataFrame {}
 }
