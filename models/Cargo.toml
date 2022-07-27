@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 polars = "0.22.8"
+config = "0.13.1"

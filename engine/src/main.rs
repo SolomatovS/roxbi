@@ -1,6 +1,6 @@
 use std::error::Error;
 use dymod::dymod;
-use models::{DataFrame, Transform};
+use models::{DataFrame, Transform, Config};
 
 
 dymod! {
@@ -27,8 +27,8 @@ fn try_main() -> Result<(), Box<dyn Error>> {
   let mut df = DataFrame::default();
 
   loop {
-    df = csv_extractor.transform(df)?;
-    df = sum_transform.transform(df)?;
+    df = csv_extractor.transform(df, None)?;
+    df = sum_transform.transform(df, None)?;
     
     std::thread::sleep(std::time::Duration::from_millis(500));
   }

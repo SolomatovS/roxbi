@@ -1,17 +1,15 @@
-use polars::prelude::*;
-use models::{Transform};
+use std::result::Result;
+use std::error::Error;
+use models::{DataFrame, Transform, Config};
 
 pub struct SumTransform {
 
 }
 
 impl Transform for SumTransform {
-  fn transform(&self,
-    #[allow(unused_variables)] data: DataFrame
-  ) -> std::result::Result<DataFrame, Box<dyn std::error::Error>> {
-
-    println!("{:?}", &data);
-
+  fn transform(&self, data: DataFrame, conf: Option<&Config>) -> Result<DataFrame, Box<dyn Error>> {
+    println!("conf: {:?}", &conf);
+    println!("data: {:?}", &data);
     Ok(data)
   }
 }

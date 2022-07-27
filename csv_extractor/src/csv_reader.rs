@@ -1,18 +1,16 @@
 use std::result::Result;
 use std::error::Error;
-use polars::prelude::{DataFrame, CsvReader, SerReader};
-use models::{Transform};
-
+use models::{DataFrame, Transform, Config};
+use polars::prelude::{CsvReader, SerReader};
 
 pub struct CsvReaderTransform {
 
 }
 
 impl Transform for CsvReaderTransform {
-  fn transform(&self, #[allow(unused_variables)] data: DataFrame) -> Result<DataFrame, Box<dyn Error>> {
-
+  fn transform(&self, data: DataFrame, conf: Option<&Config>) -> Result<DataFrame, Box<dyn Error>> {
     let path = String::from("/Users/solomatovs/Documents/GitHub/roxbi/csv_extractor/example/sdfsdf.csv");
-
+    
     let csv_reader = CsvReader::from_path(&path)?
       .has_header(true)
       .with_delimiter(b',')
