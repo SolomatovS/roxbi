@@ -9,5 +9,6 @@ members = [
     # "say_hello_console",
     "dymod",
     "engine",
-    "extractors",
+    "csv_extractor",
+    "sum_transform"
 ]

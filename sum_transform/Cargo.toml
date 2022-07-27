@@ -1,13 +1,13 @@
 [package]
-name = "engine"
+name = "sum_transform"
 version = "0.1.0"
 authors = ["Solomatov Sergei <solomatovs@gmail.com>"]
 edition = "2018"
 
+[lib]
+crate-type = ["dylib"] 
+
 [dependencies]
-dymod = { path = "../dymod", version = "*" }
 models = { path = "../models", version = "*" }
-iter_help = { path = "../iter_help", version = "*" }
 rand = "0.8"
-daggy = "0.8.0"
-# polars = "0.22.8"
+polars = "0.22.8"

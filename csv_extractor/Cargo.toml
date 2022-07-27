@@ -1,5 +1,5 @@
 [package]
-name = "extractors"
+name = "csv_extractor"
 version = "0.1.0"
 authors = ["Solomatov Sergei <solomatovs@gmail.com>"]
 edition = "2018"
@@ -10,3 +10,4 @@ crate-type = ["dylib"]
 [dependencies]
 models = { path = "../models", version = "*" }
 rand = "0.8"
+polars = "0.22.8"

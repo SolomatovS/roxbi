@@ -1,23 +1,9 @@
-use std::fmt; 
 use std::io;
 use std::path::Path;
 use std::time::SystemTime;
-use super::{Library, Error};
+use super::Library;
+use super::DymodError;
 
-#[derive(Debug)]
-pub enum DymodError {
-  IOError(io::Error, String),
-  LibloadingError(Error),
-  DymodNonInitialized,
-  SymbolNotFound(Error, String),
-  PoisonError,
-}
-
-impl fmt::Display for DymodError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.to_string())
-  }
-}
 
 #[derive(Debug)]
 pub struct DymodSource {
