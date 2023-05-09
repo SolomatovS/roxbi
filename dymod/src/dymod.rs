@@ -35,7 +35,7 @@ macro_rules! dymod {
                         let symbol = unsafe {
                           lib.get(stringify!($fnname).as_bytes())
                         };
-          
+                        
                         let symbol: Symbol<extern fn($($argtype),*) $(-> $returntype)?> = match symbol {
                           Ok(sym) => sym,
                           Err(e) => {
@@ -70,7 +70,7 @@ macro_rules! dymod {
             }
           )*
           
-          pub fn load_lbrary(file_path: &str) -> Result<$struct_name, DymodError> {
+          pub fn load_library(file_path: &str) -> Result<$struct_name, DymodError> {
             let dy = match DymodSource::new(&file_path, 1) {
               Ok(dy) => dy,
               Err(e) => return Err(e),
