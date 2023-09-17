@@ -1,9 +1,9 @@
 use std::error::Error;
-use dymod::dymod;
+use dymod::dymod_2;
 use models::{DataFrame, Transform, Config};
 
 
-dymod! {
+dymod_2! {
   pub mod transform {
     pub struct Extractor {
       fn init(name: &str) -> Box<dyn Transform>;
@@ -13,7 +13,7 @@ dymod! {
 
 
 fn load_transform(path: &str) -> Result<Box<dyn Transform>, Box<dyn Error>> {
-  let sub = transform::Extractor::load_library(&path)?;
+  let sub = transform::Extractor::new(&path)?;
   println!("loaded {:?}", &path);
 
   let res = sub.init("csv loader #1")?;
